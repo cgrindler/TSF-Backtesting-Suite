@@ -1,0 +1,36 @@
+{
+  "horizont":24,
+
+  "order": {
+    "ar": 4,
+    "d":0,
+    "ma":2
+  },
+
+  "sorder": {
+    "ar": 1,
+    "d": 0,
+    "ma": 1,
+    "s": 24
+  },
+
+
+  "filterweight":5,
+  "hourOfDay":10,
+  "nPrediction": 10,
+  "modelHistory": 168,
+
+  "datapath": "Daten/sort/Wind/Fuerstenzell.csv",
+  "timeseriesName":"Load",
+  "exogCol":"",
+  "location":"Aruba",
+  "from": "2014",
+  "till": "2015",
+  "BackTest": true,
+  "scale":  true,
+  "Mode":  "1",
+  "LSTM": false,
+  "LSTM_Layers": "100",
+  "ForecastCol":"0",
+  "delimiter": ";"
+}

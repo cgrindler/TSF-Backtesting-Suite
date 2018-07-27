@@ -1,0 +1,5 @@
+statsmodels>=0.6.0
+tensorflow
+matplotlib
+keras
+pyqt5
