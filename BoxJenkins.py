@@ -40,7 +40,9 @@ class BoxJenkins:
 
     def fitting(self, mdlName, folderPath, method="lbfgs"):
         
-        mdlpath = folderPath+ "\\"+mdlName
+        mdlpath = folderPath+ "/"+mdlName
+
+        print(mdlpath)
         if not os.path.isfile(mdlpath): #falls Modell noch nicht erstellt worden ist
             
             print("\nEstimation of Sarimax-Model "+str(self.order)+"x"+str(self.sorder)+"\n\n")
@@ -93,6 +95,8 @@ class BoxJenkins:
         bis = int(anzahl) # number of n-step forecasts
         for x in range(0,0+bis): # für Lags in Prognosemodell wird ien 10 Tages Delay eingeführt
             
+            #start = Season + Horizont + Horizont*i + delay
+            
             startPr = n * nstep + nstep * x + hourOfDay
             if exog is None:
                 CastContainer = CastContainer.append(self.filt.predict(start=startPr,end = startPr + nstep - 1,dynamic=True)) 
@@ -119,7 +123,8 @@ class BoxJenkins:
                 print("New Model-Folder created.")
             except: print("No Permissions. Please create Model-folder by your own.")
 
-        self.fitted.save(folderPath+"//"+mdlName,remove_data=True)
+        self.fitted.save(folderPath+"/"+mdlName,remove_data=True)
+        print("Model saved: " + str(os.path.isfile(folderPath+"/"+mdlName)))
 
 
 

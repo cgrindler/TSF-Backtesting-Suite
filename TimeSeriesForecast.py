@@ -39,57 +39,57 @@ def BackTesting(Specs, csvObj=""):
         
 
         if(Specs.Mode == "1"):
-            folderPath = Specs.mdlPathBJ+"\\"+ folderName
+            folderPath = Specs.mdlPathBJ+"/"+ folderName
             #if model exists, no parameter estimation is necessary
             modelObj.fitting(Specs.mdlName,folderPath) 
             
         if(Specs.Mode == "2"):
             modelObj.fitting()
- 
-        
-        print("\nPrediction with generated model"+str(Specs.order)+"x"+str(Specs.sorder)+"\n\n")
-
+   
 
         if (Specs.Mode == "1"):
 
-            ##### -1-Step Prediction- #####
-            ax = plt.subplot(2,1,1)
+            print("\nPredictions with generated Sarimax-Model "+str(Specs.order)+"x"+str(Specs.sorder)+"\n\n")
             pred1 = modelObj.predict1Step()
-            dataObj.visualize(ax, Specs.timeseriesName,'1-step Forecast', timeseriesNF, pred1.predicted_mean)
-            F1 = ErrorAnalysis.ErrorAnalysis(timeseriesNF,modelObj.predicted.predicted_mean)
+            Season = Specs.sorder[3]          
+            ForecastDyn = modelObj.predictDyn(nstep=Specs.horizont,n=Specs.sorder[0],hourOfDay=Specs.hourOfDay,anzahl=Specs.AnzahlPrognosen)              
+            DataDyn = timeseriesNF.loc[ForecastDyn.index]
+            
             one = "##### 1-step Prediction ##### \n"
             print(one)
+            F1 = ErrorAnalysis.ErrorAnalysis(timeseriesNF,modelObj.predicted.predicted_mean)
             print(F1.criterias)
         
-            print("\nCalculation of Sarimax-Model "+str(Specs.order)+"x"+str(Specs.sorder)+"\n\n")
-
-            ##### -Multi-Step Prediction- #####
-            ax1 = plt.subplot(2,1,2)
-            Season = Specs.sorder[3]
-
-
-            ForecastDyn = modelObj.predictDyn(nstep=Specs.horizont,n=Specs.sorder[0],hourOfDay=Specs.hourOfDay,anzahl=Specs.AnzahlPrognosen)            
-        
-            DataDyn = timeseriesNF.loc[ForecastDyn.index]
-            dataObj.visualize(ax1, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast', DataDyn,ForecastDyn)
-            FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
-        
             multi = "\n##### "+str(Specs.horizont)+"-step Prediction ##### \n"
-        
             print(multi)
+            FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
             print(FDyn.criterias)
 
-
+            try:
+                ##### -1-Step Prediction- #####
+                ax = plt.subplot(2,1,1)
+                dataObj.visualize(ax, Specs.timeseriesName,'1-step Forecast', timeseriesNF, pred1.predicted_mean)
+                ##### -Multi-Step Prediction- #####
+                ax1 = plt.subplot(2,1,2)
+                dataObj.visualize(ax1, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast', DataDyn,ForecastDyn)
+            except:
+                print("No visualization possible.")        
+            
         else:
+            print("\nPredictions with generated Neural Network")
             trainPred, trainOut, testPred, testOut = modelObj.predict()
             Ftrain = ErrorAnalysis.ErrorAnalysis(trainOut.flatten(), trainPred.flatten())
             Ftest = ErrorAnalysis.ErrorAnalysis(testOut.flatten(), testPred.flatten())
-            ax = plt.subplot(2,1,1)
-            dataObj.visualize(ax, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast',trainOut.flatten(), trainPred.flatten())
-            ax1 = plt.subplot(2,1,2)
-            multi = "\n##### "+str(Specs.horizont)+"-step Prediction ##### \n"
-            dataObj.visualize(ax, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast',testOut.flatten(), testPred.flatten())
-            print(multi)
+            
+            try:
+                ax = plt.subplot(2,1,1)
+                dataObj.visualize(ax, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast',trainOut.flatten(), trainPred.flatten())
+                ax1 = plt.subplot(2,1,2)
+
+                dataObj.visualize(ax, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast',testOut.flatten(), testPred.flatten())
+            except:
+                print("No visualization possible.")
+            
             print("Training:\n")
             print(Ftrain.criterias)
             print("\nTest:\n")
@@ -97,37 +97,45 @@ def BackTesting(Specs, csvObj=""):
                  
         plt.show()
 
-def Operate(Specs,currentData): 
+def Operate(Specs): 
 	
-    modelObj = BoxJenkins(Specs.order,Specs.sorder,currentData.data,Specs.filterweight)	
-    mdl = modelObj.modelling()	
-    modelObj.fitting(mdl,Specs.savepath)       
-   
-    #### -1-Step Prediction- #####   
-    ax = plt.subplot(2,1,1)
-    modelObj.predict1Step()
-    #modelObj.visualize(ax, Specs.timeseriesName,'1-step Forecast', currentData.data)
-    #F1 = ErrorAnalysis(currentData.data,modelObj.predict.predicted_mean)
-    
-    one = "##### 1-step Prediction ##### \n"
-    print(one)
-    print(modelObj.predict.predicted_mean)
 
-    splitData = list()	
-    if (len(sys.argv)>1):
-        for x in range(0,int(sys.argv[1])):
-            tmpstring =raw_input().split(';')
-            
-            date = tmpstring[0]
-            value =  tmpstring[1].split(' ')[0]
-            quality = tmpstring[1].split(' ')[1]
-            splitData.append([date,float(value),quality])  
-                         
-    else: splitData.append(["123","456","100"]); print("##keine Echtzeitdaten##")
+    dataObj = DataProcessing.DataProcessing(Specs.datapath)
     
-    predictSeries = pd.DataFrame(splitData,columns = ['date','data','quality'])
-    predictSeries.index = predictSeries.date #pd.to_datetime(predictFrame.Datetime);
-    return predictSeries
+
+    # TBD make sure that input data is valid etc.
+    # TBD Error handling
+
+    if not hasattr(dataObj, "data"):
+        print("No valid data could be extracted.")
+        return
+
+    if Specs.Mode == "2":
+        print("No Neural Network support at the moment.")
+        return
+
+    if not int(Specs.AnzahlPrognosen) == 1 or not Specs.AnzahlPrognosen:
+        print("Corrected wrong configuration: Only realtime forecast is considered")
+        Specs.AnzahlPrognosen == "1"
+
+
+    import BoxJenkins
+    folderName=list(dataObj.data)[int(Specs.ForecastCol)]  
+    folderPath = Specs.mdlPathBJ+"/"+ folderName
+    mdlObj = BoxJenkins.BoxJenkins(dataObj,Specs)
+    
+    #load model
+    mdlObj.fitting(Specs.mdlName,folderPath)       
+    
+    Season = Specs.sorder[3]          
+    ForecastDyn = mdlObj.predictDyn(nstep=Specs.horizont,n=Specs.sorder[0],hourOfDay=Specs.hourOfDay,anzahl=Specs.AnzahlPrognosen)              
+    
+    timeseriesNF = dataObj.data["NoFilter"]
+    DataDyn = timeseriesNF.loc[ForecastDyn.index]   
+    multi = "\n##### "+str(Specs.horizont)+"-step Prediction ##### \n"
+    print(multi)
+    FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
+    print(FDyn.criterias)
 
 def main(Specs):
         
@@ -137,18 +145,14 @@ def main(Specs):
         print("processing data from '"+Specs.location+"'...")
         BackTesting(Specs)
     else:
-        print("(2): Live Forecast\n\n")
-        sharpObj = getDatafromSharp()			                       
-        Operate(Specs,sharpObj)
+        print("(2): Live-Prediction: Docker Mode\n\n")		                       
+        Operate(Specs)
 
 
-
-if __name__ is not "__main__":
-    
-    Specs = Specification.Specification()        
-    main(Specs)
-else:	
-    print("Please run this Script from C# for Live-Prediction\n\n")
-    Specs = Specification.Specification()        
+Specs = Specification.Specification()     
+if len(sys.argv) == 1 or sys.argv[1] != "--operate": 
     Specs.BackTest=True
-    main(Specs)
+else:
+    Specs.BackTest=False
+
+main(Specs)

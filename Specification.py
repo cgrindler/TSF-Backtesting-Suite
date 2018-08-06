@@ -8,7 +8,7 @@ class Specification:
     def __init__(self):
         
         currentdirectory = os.path.dirname(os.path.realpath(__file__))
-        with open(currentdirectory + '\\config.json') as myjson:
+        with open(currentdirectory + '/config.json') as myjson:
             data = json.load(myjson)
 
 
@@ -36,8 +36,6 @@ class Specification:
         self.datapath = data["datapath"]
         self.timeseriesName = self.datapath.split("/")[-2]
         self.location = self.datapath.split("/")[-1].split(".")[0]
-        self.mdlName = "Mdl" + str(self.order[0]) + str(self.order[1]) + str(self.order[2]) + "S" + str(self.sorder[0])+str(self.sorder[1])+str(self.sorder[2])+str(self.sorder[3])+ "F" + str(self.filterweight);
-        self.mdlPathBJ = currentdirectory +"\\Models\\BoxJenkinsModels\\"+self.timeseriesName+"\\"+self.location
-        self.mdlPathNN = currentdirectory +"\\Models\\NeuralNetworkModels\\"+self.timeseriesName+"\\"+self.location
-        self.mdlPathBJ = self.mdlPathBJ.replace("\\", "/")
-        self.mdlPathNN = self.mdlPathNN.replace("\\", "/")
+        self.mdlName = "Mdl" + str(self.order[0]) + str(self.order[1]) + str(self.order[2]) + "S" + str(self.sorder[0])+str(self.sorder[1])+str(self.sorder[2])+str(self.sorder[3])+ "F" + str(self.filterweight)        
+        self.mdlPathBJ = currentdirectory +"/Models/BoxJenkinsModels/"+self.timeseriesName+"/"+self.location
+        self.mdlPathNN = currentdirectory +"/Models/NeuralNetworkModels/"+self.timeseriesName+"/"+self.location
