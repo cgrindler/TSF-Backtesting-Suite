@@ -2,7 +2,6 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 from dateutil.parser import parse
-import matplotlib.pyplot as plt
 import Specification
 import statsmodels.api as sm
 from sklearn.preprocessing import MinMaxScaler
@@ -102,6 +101,7 @@ class DataProcessing:
 
     def visualize(self,ax,labelname,title, *data):
         
+            import matplotlib.pyplot as plt
             #ax = plt.subplots()
             ax.set_title(title, loc='left')
             #ax.set_ylabel(labelname)
