@@ -2,7 +2,6 @@
 
 # -*- coding: utf-8 -*-
 
-import matplotlib.pyplot as plt
 import os.path
 import sys
 import Specification
@@ -24,7 +23,7 @@ def generateModel(Specs,dataObj):
     modelObj.modelling()
     if(Specs.Mode == "1"):
         folderName=list(dataObj.data)[int(Specs.ForecastCol)] 
-        folderPath = Specs.mdlPathBJ+"\\"+ folderName
+        folderPath = Specs.mdlPathBJ+"/"+ folderName
         #if model exists, no parameter estimation is necessary
         modelObj.fitting(Specs.mdlName,folderPath) 
         
@@ -65,6 +64,7 @@ def BackTesting(Specs):
         print(FDyn.criterias)
 
         try:
+            import matplotlib.pyplot as plt
             ax = plt.subplot(2,1,1)
             dataObj.visualize(ax, Specs.timeseriesName,'1-step Forecast', timeseriesNF, pred1.predicted_mean)
             ax1 = plt.subplot(2,1,2)
@@ -81,6 +81,7 @@ def BackTesting(Specs):
         Ftest = ErrorAnalysis.ErrorAnalysis(testOut.flatten(), testPred.flatten())
         
         try:
+            import matplotlib.pyplot as plt
             ax = plt.subplot(2,1,1)
             dataObj.visualize(ax, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast',trainOut.flatten(), trainPred.flatten())
             ax1 = plt.subplot(2,1,2)
