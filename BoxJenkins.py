@@ -41,8 +41,6 @@ class BoxJenkins:
     def fitting(self, mdlName, folderPath, method="lbfgs"):
         
         mdlpath = folderPath+ "/"+mdlName
-
-        print(mdlpath)
         if not os.path.isfile(mdlpath): #falls Modell noch nicht erstellt worden ist
             
             print("\nEstimation of Sarimax-Model "+str(self.order)+"x"+str(self.sorder)+"\n\n")
@@ -78,7 +76,8 @@ class BoxJenkins:
             
         else:
             self.fitted = sm.load(mdlpath)
-   
+            print("Model loaded:\n" +  mdlpath)
+
         try: #no clue why you can't filter after saving in the same thread
             self.filt = self.mdl.filter(self.fitted.params)
         except:
@@ -89,9 +88,7 @@ class BoxJenkins:
 
     def predictDyn(self,nstep,n,hourOfDay,exog=None,anzahl=10):
         
-
         CastContainer = pd.Series()
-
         bis = int(anzahl) # number of n-step forecasts
         for x in range(0,0+bis): # für Lags in Prognosemodell wird ien 10 Tages Delay eingeführt
             
@@ -107,7 +104,6 @@ class BoxJenkins:
     
     def predict1Step(self):
        
-
         self.predicted = self.filt.get_prediction()
         self.predicted.predicted_mean[self.predicted.predicted_mean < 0] = 0
         #self.predictdf = self.predict.predicted_mean.to_frame(name="Value")
