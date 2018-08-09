@@ -14,6 +14,7 @@ class DataProcessing:
         self.Spec = Specification.Specification()
         self.scaling = self.Spec.scale
         self.filterweight = self.Spec.filterweight
+        self. datapath = path 
 
         # this class provides methods to prepare csv input data
         try:

@@ -17,6 +17,7 @@ class BoxJenkins:
         self.sorder = Specs.sorder
         self.ForecastCol = Specs.ForecastCol
         self.exog = None
+        self.Backtest = Specs.BackTest
         #toDO add support for exogenous variables
         self.dataIntervall = dataObj.data[dataObj.data.columns[int(self.ForecastCol)]]
 
@@ -40,12 +41,18 @@ class BoxJenkins:
     def fitting(self, mdlName, folderPath, method="lbfgs"):
         
         mdlpath = folderPath+ "/"+mdlName
+        mdlpath = mdlpath.replace("_live","")
+        print("Model under ", mdlpath)
+        sys.stdout.flush()
+        
         if not os.path.isfile(mdlpath): #falls Modell noch nicht erstellt worden ist
             
             print("\nEstimation of Sarimax-Model "+str(self.order)+"x"+str(self.sorder)+"\n\n")
+            sys.stdout.flush() 
             
             try:
-                self.fitted = self.mdl.fit(method=method,maxiter=1000) 
+                self.fitted = self.mdl.fit(method=method,maxiter=1000)
+
                 
                 ### algorithms/methods ###
 
@@ -92,8 +99,11 @@ class BoxJenkins:
         for x in range(0,0+bis): # für Lags in Prognosemodell wird ien 10 Tages Delay eingeführt
             
             #start = Season + Horizont + Horizont*i + delay
-            
-            startPr = n * nstep + nstep * x + hourOfDay
+
+            if self.Backtest == False:
+                startPr = 0            
+            else:
+                startPr = n * nstep + nstep * x + hourOfDay
             if exog is None:
                 CastContainer = CastContainer.append(self.filt.predict(start=startPr,end = startPr + nstep - 1,dynamic=True)) 
             else:    
@@ -109,7 +119,9 @@ class BoxJenkins:
         self.confint = self.predicted.conf_int()
         return self.predicted
 
-                       
+    def predictOperative(self,step):
+        return self.filt.predict(start=0,end=step,dynamic=False)
+
     def saveit(self, folderPath, mdlName):
         
         if not os.path.isdir(folderPath):

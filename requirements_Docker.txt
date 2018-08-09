@@ -1,3 +1,4 @@
+watchdog
 scipy
 numpy
 statsmodels>=0.6.0

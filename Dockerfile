@@ -5,4 +5,5 @@ RUN pip install -r /requirements_Docker.txt
 
 WORKDIR /
 COPY ./ /
-RUN python /TimeSeriesForecast.py
+ENV PYTHONWARNINGS="ignore"
+#CMD python /TimeSeriesForecast.py --operate --config /var/don/work

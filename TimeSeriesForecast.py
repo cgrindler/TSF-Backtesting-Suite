@@ -2,11 +2,24 @@
 
 # -*- coding: utf-8 -*-
 
+import os, time
+import csv
+from datetime import datetime
 import os.path
 import sys
 import Specification
 import DataProcessing
 import ErrorAnalysis
+
+from watchdog.observers import Observer
+from watchdog.events import FileSystemEventHandler
+
+def createCsv(forecasts, Specs):
+    with open(Specs.output,'w') as file:
+        file.write("TIMESTAMP;FORECAST\n")
+        for time, value in  forecasts.items():
+            file.write(str(time)+";"+str(value)+"\n")
+        file.close()
 
 def generateModel(Specs,dataObj):
     
@@ -22,8 +35,8 @@ def generateModel(Specs,dataObj):
 
     modelObj.modelling()
     if(Specs.Mode == "1"):
-        folderName=list(dataObj.data)[int(Specs.ForecastCol)] 
-        folderPath = Specs.mdlPathBJ+"/"+ folderName
+        folderName=list(dataObj.data)[int(Specs.ForecastCol)]           
+        folderPath = Specs.mdlPathBJ+"/"+ Specs.location +"/" + folderName
         #if model exists, no parameter estimation is necessary
         modelObj.fitting(Specs.mdlName,folderPath) 
         
@@ -32,14 +45,73 @@ def generateModel(Specs,dataObj):
 
     return modelObj
 
+def watchFile(Specs):
+
+
+    class Handler(FileSystemEventHandler):
+
+        def __init__(self,Specs):
+            self.Specs = Specs
+            #linux time
+            self.old = time.mktime(datetime.now().timetuple())
+        
+        def on_any_event(self,event):
+            if event.is_directory:
+                return None
+
+            elif event.event_type == 'created':
+                # Take any action here when a file is first created.
+
+                print("Received created event - %s." % event.src_path)
+                sys.stdout.flush()
+                #workaround -> watchdog triggers same event twice :-/
+                new = os.stat(Specs.datapath)
+                if (new - self.old) > 0.5:
+                    Operate(Specs)
+                self.old = new
+
+
+            elif event.event_type == 'modified':
+                # Taken any action here when a file is modified.
+                print("Received modified event - %s." % event.src_path)
+                sys.stdout.flush()
+                new = os.stat(Specs.datapath).st_mtime
+                if (new - self.old) > 0.5:
+                    Operate(Specs)
+                else: print("Operation skipped - same event twice.")
+                self.old = new
+
+    watchPath = os.path.dirname(Specs.datapath)
+
+    
+    print("----------------------------------------------------------")
+    sys.stdout.flush()
+    print("Start watching folder ", watchPath)
+    sys.stdout.flush()
+    print(str(datetime.now()))
+    print("Forecast starts automatically if any changes are detected.")
+    sys.stdout.flush()
+    print("----------------------------------------------------------")
+    sys.stdout.flush()
+    observer = Observer()
+    event_handler = Handler(Specs)
+    observer.schedule(event_handler, watchPath,recursive=True)
+    observer.start()
+   
+    try:
+        while True:
+            time.sleep(5)
+    except:
+        observer.stop()
+        print("Error while watching" , watchPath)
+        sys.stdout.flush()
+    observer.join()
+
 def BackTesting(Specs):
 
     #warning: Format YYYY-MM-DD  (~) > 1000x faster than DD.MM.YYYY     
     dataObj = DataProcessing.DataProcessing(Specs.datapath)
     modelObj = generateModel(Specs,dataObj)
-
-    folderName = list(dataObj.data)[int(Specs.ForecastCol)]
-    timeseries = dataObj.data[dataObj.data.columns[int(Specs.ForecastCol)]]
     timeseriesNF = dataObj.data["NoFilter"]
         
     print("\nPrediction with generated model"+str(Specs.order)+"x"+str(Specs.sorder)+"\n\n")
@@ -51,17 +123,20 @@ def BackTesting(Specs):
         F1 = ErrorAnalysis.ErrorAnalysis(timeseriesNF,modelObj.predicted.predicted_mean)
         one = "##### 1-step Prediction ##### \n"
         print(one)
+        sys.stdout.flush()
         print(F1.criterias) 
+        sys.stdout.flush()
 
-        ##### -Multi-Step Prediction- #####
-        Season = Specs.sorder[3]          
+        ##### -Multi-Step Prediction- #####       
         ForecastDyn = modelObj.predictDyn(nstep=Specs.horizont,n=Specs.sorder[0],hourOfDay=Specs.hourOfDay,anzahl=Specs.AnzahlPrognosen)              
         DataDyn = timeseriesNF.loc[ForecastDyn.index]
 
         FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
         multi = "\n##### "+str(Specs.horizont)+"-step Prediction ##### \n"
         print(multi)
+        sys.stdout.flush()
         print(FDyn.criterias)
+        sys.stdout.flush()
 
         try:
             import matplotlib.pyplot as plt
@@ -91,19 +166,23 @@ def BackTesting(Specs):
         
         print("Training:\n")
         print(Ftrain.criterias)
+        sys.stdout.flush()
         print("\nTest:\n")
         print(Ftest.criterias)
+        sys.stdout.flush()
         plt.show()     
 
-
 def Operate(Specs): 
-	
 
     dataObj = DataProcessing.DataProcessing(Specs.datapath)
-    
-
     # TBD make sure that input data is valid etc.
+    # TBD back test results against real data
     # TBD Error handling
+    # TBD fix model paths
+    print("----------------------------------------------------------")
+    print("Event forecast started.")
+    print(datetime.now())
+    print("----------------------------------------------------------")
 
     if not hasattr(dataObj, "data"):
         print("No valid data could be extracted.")
@@ -115,43 +194,41 @@ def Operate(Specs):
 
     if not int(Specs.AnzahlPrognosen) == 1 or not Specs.AnzahlPrognosen:
         print("Corrected wrong configuration: Only realtime forecast is considered")
-        Specs.AnzahlPrognosen == "1"
+        Specs.AnzahlPrognosen = 1
 
+    print("Input data: ", dataObj.datapath)
 
-    import BoxJenkins
-    folderName=list(dataObj.data)[int(Specs.ForecastCol)]  
-    folderPath = Specs.mdlPathBJ+"/"+ folderName
-    mdlObj = BoxJenkins.BoxJenkins(dataObj,Specs)
-    
     #load model
-    mdlObj.fitting(Specs.mdlName,folderPath)       
-    
-    Season = Specs.sorder[3]          
-    ForecastDyn = mdlObj.predictDyn(nstep=Specs.horizont,n=Specs.sorder[0],hourOfDay=Specs.hourOfDay,anzahl=Specs.AnzahlPrognosen)              
-    
+    mdlObj = generateModel(Specs,dataObj)
+                  
+    ForecastDyn = mdlObj.predictOperative(Specs.horizont-1)
     timeseriesNF = dataObj.data["NoFilter"]
+
+    createCsv(ForecastDyn, Specs)
     DataDyn = timeseriesNF.loc[ForecastDyn.index]   
-    multi = "\n##### "+str(Specs.horizont)+"-step Prediction ##### \n"
+    multi = "\n##### "+str(Specs.horizont)+"-step Prediction against last values ##### \n"
     print(multi)
+    sys.stdout.flush()
     FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
     print(FDyn.criterias)
+    sys.stdout.flush()
 
-def main(Specs):
-        
-    if Specs.BackTest is True:
-            
-        print("(1): Backtesting\n\n")
-        print("processing data from '"+Specs.location+"'...")
+def main():
+    
+    if "--config" in sys.argv:
+        Specs = Specification.Specification(sys.argv[sys.argv.index("--config")+1])
+    else:
+        Specs = Specification.Specification()
+
+    if not "--operate" in sys.argv:  
+        print("(1): Backtesting: Calculation and evaluating of statistical models\n\n")		
+        sys.stdout.flush() 
+        Specs.BackTest=True
         BackTesting(Specs)
     else:
-        print("(2): Live-Prediction: Docker Mode\n\n")		                       
-        Operate(Specs)
+        print("(2): Live-Prediction: Docker Mode\n\n")		
+        sys.stdout.flush() 
+        Specs.BackTest=False
+        watchFile(Specs)
 
-
-Specs = Specification.Specification()     
-if len(sys.argv) == 1 or sys.argv[1] != "--operate": 
-    Specs.BackTest=True
-else:
-    Specs.BackTest=False
-
-main(Specs)
+main()

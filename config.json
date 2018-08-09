@@ -1,32 +1,30 @@
 {
-  "horizont":24,
+  "horizont":15,
 
   "order": {
-    "ar": 4,
+    "ar": 3,
     "d":0,
-    "ma":2
+    "ma":1
   },
 
   "sorder": {
     "ar": 1,
     "d": 0,
-    "ma": 1,
-    "s": 24
+    "ma": 0,
+    "s": 15
   },
 
 
-  "filterweight":5,
-  "hourOfDay":10,
-  "nPrediction": 10,
+  "filterweight":2,
+  "hourOfDay":3,
+  "nPrediction": 20,
   "modelHistory": 168,
 
-  "datapath": "Daten/sort/Wind/Fuerstenzell.csv",
-  "timeseriesName":"Load",
+  "datapath": "Daten/sort/Radiation/BaileyPQ_live.csv",
+  "output": "test.csv",
   "exogCol":"",
-  "location":"Aruba",
   "from": "2014",
-  "till": "2015",
-  "BackTest": true,
+  "till": "2018",
   "scale":  true,
   "Mode":  "1",
   "LSTM": false,
