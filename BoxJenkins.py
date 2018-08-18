@@ -41,8 +41,6 @@ class BoxJenkins:
     def fitting(self, mdlName, folderPath, method="lbfgs"):
         
         mdlpath = folderPath+ "/"+mdlName
-        mdlpath = mdlpath.replace("_live","")
-        print("Model under ", mdlpath)
         sys.stdout.flush()
         
         if not os.path.isfile(mdlpath): #falls Modell noch nicht erstellt worden ist
@@ -53,7 +51,6 @@ class BoxJenkins:
             try:
                 self.fitted = self.mdl.fit(method=method,maxiter=1000)
 
-                
                 ### algorithms/methods ###
 
                 #- 'newton' for Newton-Raphson, 
@@ -64,25 +61,26 @@ class BoxJenkins:
                 #- 'cg' for conjugate gradient
                 #- 'ncg' for Newton-conjugate gradient
                 #- 'basinhopping' for global basin-hopping solver
-            except:
-              
-                print("Could not estimate model parameters - try another SARIMAX model")
-                os.system("pause")
-                sys.exit()
+            except Exception as e:
+                print("Could not estimate model parameters:")
+                print(e)
+                sys.stdout.flush()
+                return
 
             try:
 
                 self.saveit(folderPath,mdlName)
-            except:
-                print("Saving the model caused problems - please debug the program")
-                os.system("pause")
-                sys.exit()                              
+            except Exception as e:
+                print("Saving the model caused problems - please debug the program")    
+                print(e)  
+                sys.stdout.flush()
+                return            
                 #self.fit = None
                 #self.fit = sm.load(path)
             
         else:
             self.fitted = sm.load(mdlpath)
-            print("Model loaded:\n" +  mdlpath)
+            print("Model loaded: " +  mdlpath)
 
         try: #no clue why you can't filter after saving in the same thread
             self.filt = self.mdl.filter(self.fitted.params)
@@ -92,7 +90,7 @@ class BoxJenkins:
             os.execl(python, python, * sys.argv)
         
 
-    def predictDyn(self,nstep,n,hourOfDay,exog=None,anzahl=10):
+    def predictDyn(self,nstep,n,delay,exog=None,anzahl=10):
         
         CastContainer = pd.Series()
         bis = int(anzahl) # number of n-step forecasts
@@ -103,7 +101,7 @@ class BoxJenkins:
             if self.Backtest == False:
                 startPr = 0            
             else:
-                startPr = n * nstep + nstep * x + hourOfDay
+                startPr = n * nstep + nstep * x + delay
             if exog is None:
                 CastContainer = CastContainer.append(self.filt.predict(start=startPr,end = startPr + nstep - 1,dynamic=True)) 
             else:    
@@ -120,7 +118,7 @@ class BoxJenkins:
         return self.predicted
 
     def predictOperative(self,step):
-        return self.filt.predict(start=0,end=step,dynamic=False)
+        return self.filt.predict(start=0,end=step-1,dynamic=False)
 
     def saveit(self, folderPath, mdlName):
         

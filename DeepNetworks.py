@@ -28,7 +28,6 @@ class DeepNetworks:
         self.trainIn, self.trainOut = dataObj.createInputOutput(self.train, self.hist, self.horizont, self.interval)
         self.testIn, self.testOut = dataObj.createInputOutput(self.test, self.hist, self.horizont, self.interval)
 
-
     def modelling(self):
 
         # create network
@@ -45,8 +44,6 @@ class DeepNetworks:
         self.model.add(Dense(self.horizont, init='uniform'))
 
         print(self.model.summary())
-
-
 
     def fitting(self):
 

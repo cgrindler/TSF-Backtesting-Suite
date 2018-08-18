@@ -19,6 +19,8 @@ def createCsv(forecasts, Specs):
         file.write("TIMESTAMP;FORECAST\n")
         for time, value in  forecasts.items():
             file.write(str(time)+";"+str(value)+"\n")
+        print("Forecast created: ", forecasts)
+        sys.stdout.flush()
         file.close()
 
 def generateModel(Specs,dataObj):
@@ -34,11 +36,25 @@ def generateModel(Specs,dataObj):
         modelObj = DeepNetworks.DeepNetworks(dataObj, Specs, 10)
 
     modelObj.modelling()
+
     if(Specs.Mode == "1"):
-        folderName=list(dataObj.data)[int(Specs.ForecastCol)]           
-        folderPath = Specs.mdlPathBJ+"/"+ Specs.location +"/" + folderName
+        attributeName = list(dataObj.data)[int(Specs.ForecastCol)]
+
+        if "PV" in Specs.datapath or "Solar" in Specs.datapath:
+            mdlSub = "solar"  
+        elif "Load" in Specs.datapath:
+            mdlSub = "load"
+        elif "Wind" in Specs.datapath:
+            mdlSub = "wind"
+        else:
+            mdlSub = "other"
+            
+
+        mdlPath = Specs.mdlPathBJ+"/"+ mdlSub +"/" + attributeName
+
+        print("Model under " +  mdlPath)
         #if model exists, no parameter estimation is necessary
-        modelObj.fitting(Specs.mdlName,folderPath) 
+        modelObj.fitting(Specs.mdlName, mdlPath) 
         
     if(Specs.Mode == "2"):
         modelObj.fitting()
@@ -56,43 +72,43 @@ def watchFile(Specs):
             self.old = time.mktime(datetime.now().timetuple())
         
         def on_any_event(self,event):
-            if event.is_directory:
-                return None
+            
+            try:
+                if event.is_directory:
+                    return None
 
-            elif event.event_type == 'created':
-                # Take any action here when a file is first created.
+                elif event.event_type == 'created':
+                    # Take any action here when a file is first created.
 
-                print("Received created event - %s." % event.src_path)
-                sys.stdout.flush()
-                #workaround -> watchdog triggers same event twice :-/
-                new = os.stat(Specs.datapath)
-                if (new - self.old) > 0.5:
-                    Operate(Specs)
-                self.old = new
+                    print("Received created event - %s." % event.src_path)
+                    sys.stdout.flush()
+                    #workaround -> watchdog triggers same event twice :-/
+                    new = os.stat(event.src_path).st_mtime
+                    if (new - self.old) > 0.5:
+                        Specs.location = event.src_path.split("/")[-1].split(".")[0]
+                        Specs.datapath = event.src_path
+                        Operate(Specs)
+                    self.old = new
 
 
-            elif event.event_type == 'modified':
-                # Taken any action here when a file is modified.
-                print("Received modified event - %s." % event.src_path)
-                sys.stdout.flush()
-                new = os.stat(Specs.datapath).st_mtime
-                if (new - self.old) > 0.5:
-                    Operate(Specs)
-                else: print("Operation skipped - same event twice.")
-                self.old = new
+                elif event.event_type == 'modified':
+                    # Taken any action here when a file is modified.
+                    print("Received modified event - %s." % event.src_path)
+                    sys.stdout.flush()
+                    new = os.stat(event.src_path).st_mtime
+                    if (new - self.old) > 0.5:
+                        Specs.location = event.src_path.split("/")[-1].split(".")[0]
+                        Specs.datapath = event.src_path
+                        Operate(Specs)
+                    else: print("Operation skipped - same event twice.")
+                    self.old = new            
+                printWatching(Specs.watchDict)
+            except Exception as e:
+                print(str(e))
 
-    watchPath = os.path.dirname(Specs.datapath)
+    watchPath = os.path.dirname(Specs.watchDict)
+    printWatching(watchPath)
 
-    
-    print("----------------------------------------------------------")
-    sys.stdout.flush()
-    print("Start watching folder ", watchPath)
-    sys.stdout.flush()
-    print(str(datetime.now()))
-    print("Forecast starts automatically if any changes are detected.")
-    sys.stdout.flush()
-    print("----------------------------------------------------------")
-    sys.stdout.flush()
     observer = Observer()
     event_handler = Handler(Specs)
     observer.schedule(event_handler, watchPath,recursive=True)
@@ -106,6 +122,14 @@ def watchFile(Specs):
         print("Error while watching" , watchPath)
         sys.stdout.flush()
     observer.join()
+
+def printWatching(watchPath):
+    print("----------------------------------------------------------")
+    print("Start watching folder ", watchPath)
+    print(str(datetime.now()))
+    print("Forecast starts automatically if any changes are detected.")
+    print("----------------------------------------------------------")
+    sys.stdout.flush()
 
 def BackTesting(Specs):
 
@@ -128,7 +152,7 @@ def BackTesting(Specs):
         sys.stdout.flush()
 
         ##### -Multi-Step Prediction- #####       
-        ForecastDyn = modelObj.predictDyn(nstep=Specs.horizont,n=Specs.sorder[0],hourOfDay=Specs.hourOfDay,anzahl=Specs.AnzahlPrognosen)              
+        ForecastDyn = modelObj.predictDyn(nstep=Specs.horizont,n=Specs.sorder[0],delay=Specs.delay,anzahl=Specs.AnzahlPrognosen)              
         DataDyn = timeseriesNF.loc[ForecastDyn.index]
 
         FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
@@ -141,12 +165,13 @@ def BackTesting(Specs):
         try:
             import matplotlib.pyplot as plt
             ax = plt.subplot(2,1,1)
-            dataObj.visualize(ax, Specs.timeseriesName,'1-step Forecast', timeseriesNF, pred1.predicted_mean)
+            dataObj.visualize(ax,'1-step Forecast', timeseriesNF, pred1.predicted_mean)
             ax1 = plt.subplot(2,1,2)
-            dataObj.visualize(ax1, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast', DataDyn,ForecastDyn)
+            dataObj.visualize(ax1,str(Specs.horizont)+'-step Forecast', DataDyn,ForecastDyn)
             plt.show()
 
-        except:
+        except Exception as e:
+            print(e)
             print("No visualization possible.")        
         
     else:
@@ -158,9 +183,9 @@ def BackTesting(Specs):
         try:
             import matplotlib.pyplot as plt
             ax = plt.subplot(2,1,1)
-            dataObj.visualize(ax, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast',trainOut.flatten(), trainPred.flatten())
+            dataObj.visualize(ax,str(Specs.horizont) + '-step Forecast',trainOut.flatten(), trainPred.flatten())
             ax1 = plt.subplot(2,1,2)
-            dataObj.visualize(ax, Specs.timeseriesName,str(Specs.horizont)+'-step Forecast',testOut.flatten(), testPred.flatten())
+            dataObj.visualize(ax,str(Specs.horizont) + '-step Forecast',testOut.flatten(), testPred.flatten())
         except:
             print("No visualization possible.")
         
@@ -197,10 +222,10 @@ def Operate(Specs):
         Specs.AnzahlPrognosen = 1
 
     print("Input data: ", dataObj.datapath)
-
+    
     #load model
     mdlObj = generateModel(Specs,dataObj)
-                  
+
     ForecastDyn = mdlObj.predictOperative(Specs.horizont-1)
     timeseriesNF = dataObj.data["NoFilter"]
 

@@ -14,14 +14,14 @@ class DataProcessing:
         self.Spec = Specification.Specification()
         self.scaling = self.Spec.scale
         self.filterweight = self.Spec.filterweight
-        self. datapath = path 
+        self.datapath = path 
 
         # this class provides methods to prepare csv input data
         try:
             self.data = pd.read_csv(path, sep = self.Spec.sep)
         except:
-            print("\n\nCould not read input data from "+path+". Please check if your input data is on the correct path specified.\n\n")
-
+            print("\n\nCould not read input data from "+path+". Please check if your input data is on the correct path specified or if you specified the correct delimiter.\n\n")
+            return
 
 
         if (self.is_date(self.data[self.data.columns[0]][0])):
@@ -38,7 +38,6 @@ class DataProcessing:
         self.data[self.data.columns[0]] = sm.tsa.filters.hpfilter(self.data[self.data.columns[0]],self.filterweight)[1]
         self.timeInterval(self.Spec.von,self.Spec.bis)
         self.replaceZeros()
-
        
     def ConvertFrame(self):
 
@@ -100,7 +99,7 @@ class DataProcessing:
         except:
             return False
 
-    def visualize(self,ax,labelname,title, *data):
+    def visualize(self, ax, title, *data):
         
             import matplotlib.pyplot as plt
             #ax = plt.subplots()
