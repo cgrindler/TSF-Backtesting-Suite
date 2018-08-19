@@ -1,5 +1,4 @@
-# TSF-Backtesting-Suite
-Time Series Forecast - Backtesting Suite: Methods and Tools
+TimeSeries Forecast - Backtesting Suite: Methods and Tools
 
 - installation pip install -r requirements.txt (anaconda > 5 recommended) 
 - to start this application run python TimeSeriesForecast.py
