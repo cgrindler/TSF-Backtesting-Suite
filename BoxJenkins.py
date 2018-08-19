@@ -9,29 +9,30 @@ import subprocess
 import math
 from sklearn.preprocessing import MinMaxScaler
 
-
 class BoxJenkins:
 
     def __init__(self, dataObj, Specs):
+
         self.order = Specs.order
         self.sorder = Specs.sorder
         self.ForecastCol = Specs.ForecastCol
         self.exog = None
-        self.Backtest = Specs.BackTest
-        #toDO add support for exogenous variables
+        self.BackTest = Specs.BackTest
         self.dataIntervall = dataObj.data[dataObj.data.columns[int(self.ForecastCol)]]
-
         if not Specs.exogCol == "":
-            self.exog = dataObj.data[dataObj.data.columns[int(Specs.exogCol)]]
 
+            self.exog = dataObj.data[dataObj.data.columns[int(Specs.exogCol)]]
         self.filterweight = Specs.filterweight
 
     def modelling(self):
         
-        if self.filterweight is 0:
+        # for live operation there is a problem with the 
+        # filtering approach: edges a wrongly calculated
+        # in general filtering is tricky to implement for
+        # operational use
+          
+        if self.filterweight is 0 or self.BackTest == False:
             mdlData = self.dataIntervall.astype(float)
-            #mdlData.values = mdlData.values.astype(float)
-        
         else:
             mdlData = sm.tsa.filters.hpfilter(self.dataIntervall,self.filterweight)[1];        
             
@@ -43,13 +44,13 @@ class BoxJenkins:
         mdlpath = folderPath+ "/"+mdlName
         sys.stdout.flush()
         
-        if not os.path.isfile(mdlpath): #falls Modell noch nicht erstellt worden ist
+        if not os.path.isfile(mdlpath): 
             
-            print("\nEstimation of Sarimax-Model "+str(self.order)+"x"+str(self.sorder)+"\n\n")
+            print("\nestimation of sarimax model "+str(self.order)+"x"+str(self.sorder)+"\n\n")
             sys.stdout.flush() 
             
             try:
-                self.fitted = self.mdl.fit(method=method,maxiter=1000)
+                self.fitted = self.mdl.fit(method=method,maxiter=200)
 
                 ### algorithms/methods ###
 
@@ -61,17 +62,19 @@ class BoxJenkins:
                 #- 'cg' for conjugate gradient
                 #- 'ncg' for Newton-conjugate gradient
                 #- 'basinhopping' for global basin-hopping solver
+
             except Exception as e:
-                print("Could not estimate model parameters:")
+                print("could not estimate model parameters:")
                 print(e)
                 sys.stdout.flush()
                 return
 
             try:
 
-                self.saveit(folderPath,mdlName)
+                self.saveit(folderPath, mdlName)
+                
             except Exception as e:
-                print("Saving the model caused problems - please debug the program")    
+                print("saving the model caused problems - please debug the program")    
                 print(e)  
                 sys.stdout.flush()
                 return            
@@ -80,28 +83,29 @@ class BoxJenkins:
             
         else:
             self.fitted = sm.load(mdlpath)
-            print("Model loaded: " +  mdlpath)
+            print("model loaded: " +  mdlpath)
 
         try: #no clue why you can't filter after saving in the same thread
             self.filt = self.mdl.filter(self.fitted.params)
         except:
-            print("Model fitted and saved, the program will restart for results")
+            print("model fitted and saved, the program will restart for results")
             python = sys.executable
             os.execl(python, python, * sys.argv)
         
 
     def predictDyn(self,nstep,n,delay,exog=None,anzahl=10):
         
-        CastContainer = pd.Series()
-        bis = int(anzahl) # number of n-step forecasts
-        for x in range(0,0+bis): # für Lags in Prognosemodell wird ien 10 Tages Delay eingeführt
-            
-            #start = Season + Horizont + Horizont*i + delay
+        # calculates cyclically forecasts over 
+        # given historical data bound to specific
+        # step size
 
-            if self.Backtest == False:
-                startPr = 0            
-            else:
-                startPr = n * nstep + nstep * x + delay
+        CastContainer = pd.Series()
+        # number of n-step forecasts
+        bis = int(anzahl) 
+        for x in range(0,0+bis): 
+            
+            #start[i]: season + horizont + horizont*i + delay
+            startPr = n * nstep + nstep * x + delay
             if exog is None:
                 CastContainer = CastContainer.append(self.filt.predict(start=startPr,end = startPr + nstep - 1,dynamic=True)) 
             else:    
@@ -110,26 +114,30 @@ class BoxJenkins:
         return CastContainer                                                                                      
     
     def predict1Step(self):
-       
+
+        # output of model estimation process
         self.predicted = self.filt.get_prediction()
         self.predicted.predicted_mean[self.predicted.predicted_mean < 0] = 0
-        #self.predictdf = self.predict.predicted_mean.to_frame(name="Value")
         self.confint = self.predicted.conf_int()
         return self.predicted
 
-    def predictOperative(self,step):
-        return self.filt.predict(start=0,end=step-1,dynamic=False)
+    def predictOperative(self, step):
 
+        # looks for incoming data length and calculates 
+        # "out-of-sample" forecast behind last timestamp
+        start = len(self.dataIntervall) + 1
+        return self.filt.predict(start=start, end=start+step, dynamic = True)
+ 
     def saveit(self, folderPath, mdlName):
         
         if not os.path.isdir(folderPath):
             try:                
                 os.makedirs(folderPath)
-                print("New Model-Folder created.")
-            except: print("No Permissions. Please create Model-folder by your own.")
+                print("new model folder created.")
+            except: print("no permissions. please create model folder by your own.")
 
         self.fitted.save(folderPath+"/"+mdlName,remove_data=True)
-        print("Model saved: " + str(os.path.isfile(folderPath+"/"+mdlName)))
+        print("model saved: " + str(os.path.isfile(folderPath+"/"+mdlName)))
 
 
 

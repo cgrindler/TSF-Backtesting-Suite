@@ -25,13 +25,11 @@ class Specification:
         # equivalent to delete first x rows of timeseries within model estimation
         self.delay = data["delay"]
 
-        
         self.AnzahlPrognosen = data["nPrediction"]
         self.von=data["from"]
         self.bis=data["till"]
         self.ForecastCol = data["ForecastCol"]
         self.Mode = data["Mode"]
-        self.watchDict=data["watchDict"]
         self.modelHistory = data["modelHistory"]
         self.scale = data["scale"]
         ###### file paths ######
@@ -45,13 +43,12 @@ class Specification:
         # not necessary for live prediction:
         # ----
         # static file path
-        self.datapath = data["datapath"]  
+        self.datapath = data["datapath"] 
+        self.mdlpath = data["modelpath"]  
+        self.watchDict = data["watchDict"]
+
+        self.mdlName = "Mdl" + str(self.order[0]) + str(self.order[1]) + str(self.order[2]) + "S" + str(self.sorder[0])+str(self.sorder[1])+str(self.sorder[2])+str(self.sorder[3])+ "F" + str(self.filterweight)         
+  
         # output for live forecast
         self.output = data["output"]
 
-        self.mdlName = "Mdl" + str(self.order[0]) + str(self.order[1]) + str(self.order[2]) + "S" + str(self.sorder[0])+str(self.sorder[1])+str(self.sorder[2])+str(self.sorder[3])+ "F" + str(self.filterweight)        
-        self.mdlPathBJ = currentdirectory +"/Models/BoxJenkinsModels/"
-        self.mdlPathNN = currentdirectory +"/Models/NeuralNetworkModels/"
-
-        self.mdlPathBJ = self.mdlPathBJ.replace("//","/")
-        self.mdlPathNN = self.mdlPathNN.replace("//","/")

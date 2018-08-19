@@ -19,9 +19,8 @@ def createCsv(forecasts, Specs):
         file.write("TIMESTAMP;FORECAST\n")
         for time, value in  forecasts.items():
             file.write(str(time)+";"+str(value)+"\n")
-        print("Forecast created: ", forecasts)
-        sys.stdout.flush()
-        file.close()
+        print("forecast created: \n\n", forecasts)
+        #file.
 
 def generateModel(Specs,dataObj):
     
@@ -40,19 +39,9 @@ def generateModel(Specs,dataObj):
     if(Specs.Mode == "1"):
         attributeName = list(dataObj.data)[int(Specs.ForecastCol)]
 
-        if "PV" in Specs.datapath or "Solar" in Specs.datapath:
-            mdlSub = "solar"  
-        elif "Load" in Specs.datapath:
-            mdlSub = "load"
-        elif "Wind" in Specs.datapath:
-            mdlSub = "wind"
-        else:
-            mdlSub = "other"
-            
+        mdlPath =  Specs.mdlpath + "/" + attributeName
 
-        mdlPath = Specs.mdlPathBJ+"/"+ mdlSub +"/" + attributeName
-
-        print("Model under " +  mdlPath)
+        print("model under " +  mdlPath)
         #if model exists, no parameter estimation is necessary
         modelObj.fitting(Specs.mdlName, mdlPath) 
         
@@ -84,27 +73,34 @@ def watchFile(Specs):
                     sys.stdout.flush()
                     #workaround -> watchdog triggers same event twice :-/
                     new = os.stat(event.src_path).st_mtime
-                    if (new - self.old) > 0.5:
+                    if (new - self.old) > 2:      
                         Specs.location = event.src_path.split("/")[-1].split(".")[0]
                         Specs.datapath = event.src_path
                         Operate(Specs)
-                    self.old = new
-
 
                 elif event.event_type == 'modified':
                     # Taken any action here when a file is modified.
                     print("Received modified event - %s." % event.src_path)
                     sys.stdout.flush()
                     new = os.stat(event.src_path).st_mtime
-                    if (new - self.old) > 0.5:
+                    print(new-self.old)
+                    if (new - self.old) > 2:      
                         Specs.location = event.src_path.split("/")[-1].split(".")[0]
                         Specs.datapath = event.src_path
                         Operate(Specs)
-                    else: print("Operation skipped - same event twice.")
-                    self.old = new            
+                    else:
+                        print("Operation skipped.")
+                
+                print("old =" + str(self.old))
+                self.old = new
+                print("new =" + str(self.old))
+                sys.stdout.flush()
                 printWatching(Specs.watchDict)
+                sys.stdout.flush()
             except Exception as e:
                 print(str(e))
+                sys.stdout.flush()
+
 
     watchPath = os.path.dirname(Specs.watchDict)
     printWatching(watchPath)
@@ -125,9 +121,9 @@ def watchFile(Specs):
 
 def printWatching(watchPath):
     print("----------------------------------------------------------")
-    print("Start watching folder ", watchPath)
+    print("start watching folder ", watchPath)
     print(str(datetime.now()))
-    print("Forecast starts automatically if any changes are detected.")
+    print("forecast starts automatically if any changes are detected.")
     print("----------------------------------------------------------")
     sys.stdout.flush()
 
@@ -138,7 +134,7 @@ def BackTesting(Specs):
     modelObj = generateModel(Specs,dataObj)
     timeseriesNF = dataObj.data["NoFilter"]
         
-    print("\nPrediction with generated model"+str(Specs.order)+"x"+str(Specs.sorder)+"\n\n")
+    print("\nprediction with generated model"+str(Specs.order)+"x"+str(Specs.sorder)+"\n\n")
 
     if(Specs.Mode == "1"):
 
@@ -175,7 +171,7 @@ def BackTesting(Specs):
             print("No visualization possible.")        
         
     else:
-        print("\nPredictions with generated Neural Network")
+        print("\npredictions with generated Neural Network")
         trainPred, trainOut, testPred, testOut = modelObj.predict()
         Ftrain = ErrorAnalysis.ErrorAnalysis(trainOut.flatten(), trainPred.flatten())
         Ftest = ErrorAnalysis.ErrorAnalysis(testOut.flatten(), testPred.flatten())
@@ -204,13 +200,13 @@ def Operate(Specs):
     # TBD back test results against real data
     # TBD Error handling
     # TBD fix model paths
-    print("----------------------------------------------------------")
-    print("Event forecast started.")
-    print(datetime.now())
-    print("----------------------------------------------------------")
+    #print("----------------------------------------------------------")
+    #print("event forecast started.")
+    #print(datetime.now())
+    #print("----------------------------------------------------------")
 
     if not hasattr(dataObj, "data"):
-        print("No valid data could be extracted.")
+        print("no valid data could be extracted.")
         return
 
     if Specs.Mode == "2":
@@ -218,25 +214,40 @@ def Operate(Specs):
         return
 
     if not int(Specs.AnzahlPrognosen) == 1 or not Specs.AnzahlPrognosen:
-        print("Corrected wrong configuration: Only realtime forecast is considered")
+        print("corrected wrong configuration: Only realtime forecast is considered")
         Specs.AnzahlPrognosen = 1
 
-    print("Input data: ", dataObj.datapath)
+    print("input data: ", dataObj.datapath)
     
     #load model
-    mdlObj = generateModel(Specs,dataObj)
+    try:
+        mdlObj = generateModel(Specs,dataObj)
+    except Exception as e:
+        print(e)
+    
+    try: 
+        ForecastDyn = mdlObj.predictOperative(Specs.horizont-1)
+        timeseriesNF = dataObj.data["NoFilter"]
+    except Exception as e:
+        print("problems while prediction:\n" + e)
 
-    ForecastDyn = mdlObj.predictOperative(Specs.horizont-1)
-    timeseriesNF = dataObj.data["NoFilter"]
+    try:
+        print("creating csv.")
+        createCsv(ForecastDyn, Specs)
+        print("done")
+    except Exception as e:
+        print("no csv could be created:\n" + e)
 
-    createCsv(ForecastDyn, Specs)
-    DataDyn = timeseriesNF.loc[ForecastDyn.index]   
-    multi = "\n##### "+str(Specs.horizont)+"-step Prediction against last values ##### \n"
-    print(multi)
-    sys.stdout.flush()
-    FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
-    print(FDyn.criterias)
-    sys.stdout.flush()
+    try:
+        DataDyn = timeseriesNF[-Specs.horizont:]
+        multi = "\n##### "+str(Specs.horizont)+"-step Prediction against last values ##### \n"
+        print(multi)
+        sys.stdout.flush()
+        FDyn = ErrorAnalysis.ErrorAnalysis(DataDyn,ForecastDyn)
+        print(FDyn.criterias)
+        sys.stdout.flush()
+    except Exception as e:
+        print(e)
 
 def main():
     
