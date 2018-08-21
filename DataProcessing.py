@@ -20,7 +20,7 @@ class DataProcessing:
         try:
             self.data = pd.read_csv(path, sep = self.Spec.sep)
         except:
-            print("\n\nCould not read input data from "+path+". Please check if your input data is on the correct path specified or if you specified the correct delimiter.\n\n")
+            print("\n\nCould not read input data "+path+". Please check if your input data is on the correct path specified or if you specified the correct delimiter.\n\n")
             return
 
 

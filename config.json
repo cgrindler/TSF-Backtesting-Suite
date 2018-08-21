@@ -1,5 +1,5 @@
 {
-  "horizont":15,
+  "horizont":24,
 
   "order": {
     "ar": 3,
@@ -11,20 +11,22 @@
     "ar": 1,
     "d": 0,
     "ma": 0,
-    "s": 15
+    "s": 24
   },
 
 
   "filterweight":2,
-  "hourOfDay":3,
+  "delay":3,
   "nPrediction": 20,
   "modelHistory": 168,
 
-  "datapath": "Daten/sort/Radiation/BaileyPQ_live.csv",
+  "datapath": "Daten/sort/Radiation/Konstanz.csv",
+  "modelpath": "Models/BoxJenkinsModels/Radiation/Konstanz",
+  "watchDict": "Daten/sort",
   "output": "test.csv",
   "exogCol":"",
-  "from": "2014",
-  "till": "2018",
+  "from": "2010",
+  "till": "2012",
   "scale":  true,
   "Mode":  "1",
   "LSTM": false,
