@@ -125,8 +125,16 @@ class BoxJenkins:
 
         # looks for incoming data length and calculates 
         # "out-of-sample" forecast behind last timestamp
-        start = len(self.dataIntervall) + 1
-        return self.filt.predict(start=start, end=start+step, dynamic = True)
+        # only statsmodels => 0.9.0 supports real out-of-sample forecast
+        # error with statsmodels 0.8.0
+        # TBD
+
+        start = len(self.dataIntervall) 
+        try:
+            return self.filt.predict(start=start, end=start+step-1, dynamic = True)
+        except Exception as e:
+            print("problems while generating forecast." + e)
+            return None
  
     def saveit(self, folderPath, mdlName):
         

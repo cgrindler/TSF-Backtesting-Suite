@@ -24,6 +24,7 @@ class Specification:
         
         # equivalent to delete first x rows of timeseries within model estimation
         self.delay = data["delay"]
+        self.logleve=data["loglevel"]
 
         self.AnzahlPrognosen = data["nPrediction"]
         self.von=data["from"]

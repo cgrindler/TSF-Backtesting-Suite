@@ -8,15 +8,15 @@
   },
 
   "sorder": {
-    "ar": 1,
+    "ar": 2,
     "d": 0,
-    "ma": 0,
+    "ma": 2,
     "s": 24
   },
 
 
-  "filterweight":2,
-  "delay":3,
+  "filterweight":0,
+  "delay":5,
   "nPrediction": 20,
   "modelHistory": 168,
 
@@ -25,12 +25,13 @@
   "watchDict": "Daten/sort",
   "output": "test.csv",
   "exogCol":"",
-  "from": "2010",
-  "till": "2012",
+  "from": "2014",
+  "till": "2018",
   "scale":  true,
   "Mode":  "1",
   "LSTM": false,
   "LSTM_Layers": "100",
   "ForecastCol":"0",
-  "delimiter": ";"
+  "delimiter": ";",
+  "loglevel": 1
 }

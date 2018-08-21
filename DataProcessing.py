@@ -9,18 +9,21 @@ from sklearn.model_selection import train_test_split
 
 class DataProcessing:
 
-    def __init__(self,path):
+    def __init__(self,Spec):
 
-        self.Spec = Specification.Specification()
+        self.Spec = Spec
         self.scaling = self.Spec.scale
         self.filterweight = self.Spec.filterweight
-        self.datapath = path 
+        self.datapath = self.Spec.datapath 
 
         # this class provides methods to prepare csv input data
         try:
-            self.data = pd.read_csv(path, sep = self.Spec.sep)
+            self.data = pd.read_csv(self.datapath, sep = self.Spec.sep)
+            if self.Spec.BackTest != True:
+                print("Input data to be used: ")
+                print(self.data)
         except:
-            print("\n\nCould not read input data "+path+". Please check if your input data is on the correct path specified or if you specified the correct delimiter.\n\n")
+            print("\n\nCould not read input data "+self.datapath+". Please check if your input data is on the correct path specified or if you specified the correct delimiter.\n\n")
             return
 
 

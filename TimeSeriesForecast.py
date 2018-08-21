@@ -73,7 +73,7 @@ def watchFile(Specs):
                     sys.stdout.flush()
                     #workaround -> watchdog triggers same event twice :-/
                     new = os.stat(event.src_path).st_mtime
-                    if (new - self.old) > 2:      
+                    if (new - self.old) > 0.1:      
                         Specs.location = event.src_path.split("/")[-1].split(".")[0]
                         Specs.datapath = event.src_path
                         Operate(Specs)
@@ -84,7 +84,7 @@ def watchFile(Specs):
                     sys.stdout.flush()
                     new = os.stat(event.src_path).st_mtime
                     print(new-self.old)
-                    if (new - self.old) > 2:      
+                    if (new - self.old) > 0.1:      
                         Specs.location = event.src_path.split("/")[-1].split(".")[0]
                         Specs.datapath = event.src_path
                         Operate(Specs)
@@ -98,7 +98,7 @@ def watchFile(Specs):
                 printWatching(Specs.watchDict)
                 sys.stdout.flush()
             except Exception as e:
-                print(str(e))
+                print("problems during operation: " + str(e))
                 sys.stdout.flush()
 
 
@@ -130,7 +130,7 @@ def printWatching(watchPath):
 def BackTesting(Specs):
 
     #warning: Format YYYY-MM-DD  (~) > 1000x faster than DD.MM.YYYY     
-    dataObj = DataProcessing.DataProcessing(Specs.datapath)
+    dataObj = DataProcessing.DataProcessing(Specs)
     modelObj = generateModel(Specs,dataObj)
     timeseriesNF = dataObj.data["NoFilter"]
         
@@ -195,7 +195,7 @@ def BackTesting(Specs):
 
 def Operate(Specs): 
 
-    dataObj = DataProcessing.DataProcessing(Specs.datapath)
+    dataObj = DataProcessing.DataProcessing(Specs)
     # TBD make sure that input data is valid etc.
     # TBD back test results against real data
     # TBD Error handling
@@ -223,10 +223,10 @@ def Operate(Specs):
     try:
         mdlObj = generateModel(Specs,dataObj)
     except Exception as e:
-        print(e)
+        print("problems while loading model: " + e)
     
     try: 
-        ForecastDyn = mdlObj.predictOperative(Specs.horizont-1)
+        ForecastDyn = mdlObj.predictOperative(Specs.horizont)
         timeseriesNF = dataObj.data["NoFilter"]
     except Exception as e:
         print("problems while prediction:\n" + e)
